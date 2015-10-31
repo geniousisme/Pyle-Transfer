@@ -1,0 +1,5 @@
+.git/*
+*.pyc
+*.swp
+*.pdf
+.DS_Store
