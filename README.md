@@ -1,8 +1,7 @@
-# PyTalk
-#### Computer Networks Programming Assignment 1: Socket Programming - Simple Chat App
+# Pyle-Transfer
+### Computer Networks Programming Assignment 2: UDP File Transfer
 
 ### Description
-------
 
 PyTalk includes 6 files:
 
@@ -71,3 +70,4 @@ To run the program:
 #### Hope you enjoy PyTalk!!!
 ![Hope you like it](http://cdn0.vox-cdn.com/assets/5057232/kerley_dance.gif)
 
+=======
