@@ -17,11 +17,12 @@ default_port = 8080
 
 class Receiver(object):
       def __init__(self, recv_ip, recv_port, send_ip, send_port):
-          self.recv_sock = init_recv_socket((recv_ip, recv_port))
+          self.recv_sock   = init_recv_socket((recv_ip, recv_port))
           self.connections = [self.recv_sock]
-          self.recv_ip   = recv_ip
-          self.recv_port = recv_port
-          self.send_addr = (send_ip, int(send_port))
+          self.recv_ip     = recv_ip
+          self.recv_port   = recv_port
+          self.send_addr   = (send_ip, int(send_port))
+          self.file_write  = open("test.pdf", "r+b")
 
       def send_open_request(self):
           print "send open request"

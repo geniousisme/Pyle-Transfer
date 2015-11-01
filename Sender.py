@@ -1,3 +1,4 @@
+import os
 import select
 import socket
 import sys
@@ -25,6 +26,13 @@ class Sender(object):
       def send_open_response(self):
           self.sender_sock.sendto("lalalala", self.recv_addr)
 
+      def send_file_response(self):
+          sent_file = open("test.pdf", "rb")
+          print "file_size:", os.path.getsize("test.pdf")
+          read_buffer = sent_file.read(RECV_BUFFER)
+          self.sender_sock.sendto(read_buffer, self.recv_addr)
+          print "send the test file to receiver!"
+
       def sender_loop(self):
           status = True;
           while status:
@@ -42,7 +50,7 @@ class Sender(object):
           self.sender_sock.close()
 
       def run(self):
-          self.send_open_response()
+          self.send_file_response()
           self.sender_loop();
 
 if __name__ == "__main__":
