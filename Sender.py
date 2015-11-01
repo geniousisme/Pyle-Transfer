@@ -19,7 +19,7 @@ default_port = 8080
 class Sender(object):
       def __init__(self, ip, port, recv_ip, recv_port):
           self.sender_sock = init_send_socket()
-          self.socket_list = [self.sender_sock]
+          self.connections = [self.sender_sock]
           self.recv_addr   = (recv_ip, recv_port)
 
       def send_open_response(self):
@@ -29,17 +29,12 @@ class Sender(object):
           status = True;
           while status:
                 try:
-                   recv_msg, recv_addr = self.sender_sock.recvfrom(RECV_BUFFER)
-                   print recv_msg
-                   status = False
-                   # if not read_sockets:
-                   #    print "dont receive data yet"
-                   #    self.sender_sock.sendto("lalalala", self.recv_addr)
-                   # else:
-                   #    print "receive receiver data"
-                   #    packet_bytes, self.recv_addr = socket.recvfrom(RECV_BUFFER)
-                   #    print "Receiver Message:", packet_bytes
-                   #    status = False
+                   read_sockets, write_sockets, error_sockets =                \
+                                 select.select(self.connections, [], [], 1)
+                   if read_sockets:
+                      recv_packet, recv_addr = self.sender_sock.recvfrom(RECV_BUFFER)
+                      print recv_packet
+                      status = False
 
                 except KeyboardInterrupt, SystemExit:
                        print "\nLeaving Pyle Transfer..."
@@ -47,7 +42,7 @@ class Sender(object):
           self.sender_sock.close()
 
       def run(self):
-          self.send_open_response
+          self.send_open_response()
           self.sender_loop();
 
 if __name__ == "__main__":
