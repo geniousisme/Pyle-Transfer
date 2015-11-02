@@ -2,6 +2,7 @@ import select
 import socket
 import sys
 
+from Utils import recv_arg_parser
 from Utils import init_recv_socket
 from Utils import RECV_BUFFER
 
@@ -84,5 +85,6 @@ class Receiver(object):
 if __name__ == "__main__":
    # addr, port = argv_reader(sys.argv)
    ip, port, send_ip, send_port = localhost, default_port, localhost, default_port + 1
+   recv_arg_parser("lalala")
    receiver = Receiver(ip, port, send_ip, send_port)
    receiver.run()

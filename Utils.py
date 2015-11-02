@@ -1,10 +1,17 @@
 import datetime
-import md5
+import os
 import socket
 import sys
-import os
+
 
 RECV_BUFFER     = 576
+
+def recv_arg_parser(argv):
+    print "here is receiver parser"
+
+def send_arg_parser(argv):
+    print "here is sender parser"
+
 
 def init_recv_socket(address):
     udp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)

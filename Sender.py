@@ -3,6 +3,7 @@ import select
 import socket
 import sys
 
+from Utils import send_arg_parser
 from Utils import RECV_BUFFER
 from Utils import init_send_socket
 
@@ -63,5 +64,6 @@ class Sender(object):
 
 if __name__ == "__main__":
    ip, port, recv_ip, recv_port = localhost, default_port + 1, localhost, default_port
+   send_arg_parser()
    sender  = Sender(ip, port, recv_ip, recv_port)
    sender.run()
