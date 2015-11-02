@@ -6,14 +6,6 @@ from Utils import recv_arg_parser
 from Utils import init_recv_socket
 from Utils import RECV_BUFFER
 
-def argv_reader(argv):
-    if len(argv) < 3:
-       print "receiver.py <filename> <listening_port> <sender_IP> <sender_port> <log_filename>"
-       print "ex. receiver file.txt 20000 128.59.15.37 20001 logfile.txt"
-       sys.exit(1)
-    else:
-       return argv[1], int(argv[2])
-
 localhost    = "localhost"#socket.gethostbyname(socket.gethostname())
 default_port = 8080
 
@@ -24,7 +16,7 @@ class Receiver(object):
           self.recv_ip     = recv_ip
           self.recv_port   = recv_port
           self.send_addr   = (send_ip, int(send_port))
-          self.file_write  = open("received_test.txt", "wb+")
+          self.file_write  = open("test/received_test.txt", "wb+")
           self.start_pos   = 0
 
       def send_open_request(self):
@@ -45,19 +37,17 @@ class Receiver(object):
           self.recv_sock.sendto("Done!!!", self.send_addr)
 
       def receiver_loop(self):
-          status = True;
+          self.start_receiver()
           print "start Pyle Transfer Reciever on %s with port %s ..."          \
                                         % (self.recv_ip, self.recv_port)
           is_sender_found = False
-          while status:
+          while self.status:
                 try:
                     if not is_sender_found:
                         self.send_open_request()
                     read_sockets, write_sockets, error_sockets =               \
                                  select.select(self.connections, [], [], 1)
-                    if not read_sockets:
-                        continue
-                    else:
+                    if read_sockets:
                         send_packet, send_addr = self.recv_sock.recvfrom(RECV_BUFFER)
                         if not is_sender_found:
                             is_sender_found = True
@@ -68,23 +58,32 @@ class Receiver(object):
                             self.read_file_response(send_packet)
                             if self.start_pos + RECV_BUFFER >= 113:
                                 self.send_close_request()
-                                status = False
                                 self.file_write.close()
+                                self.close_receiver()
                                 print "file delivery completed!"
                             else:
                                 self.send_file_request()
 
                 except KeyboardInterrupt, SystemExit:
                        print "\nLeaving Pyle Transfer..."
-                       status = False
+                       self.close_receiver()
+                       os.remove(self.file_write.name)
+
           self.recv_sock.close()
 
+      def start_receiver(self):
+          self.status = True
+
+      def close_receiver(self):
+          self.status = False
+
       def run(self):
-          self.receiver_loop();
+          self.receiver_loop()
 
 if __name__ == "__main__":
    # addr, port = argv_reader(sys.argv)
-   ip, port, send_ip, send_port = localhost, default_port, localhost, default_port + 1
-   recv_arg_parser("lalala")
+   params = localhost, default_port, localhost, default_port + 1
+   # params = recv_arg_parser(sys.argv)
+   # receiver = Receiver(**params)
    receiver = Receiver(ip, port, send_ip, send_port)
    receiver.run()
