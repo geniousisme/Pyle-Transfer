@@ -2,9 +2,10 @@ import select
 import socket
 import sys
 
-from Utils import recv_arg_parser
-from Utils import init_recv_socket
-from Utils import RECV_BUFFER
+from Utils  import recv_arg_parser
+from Utils  import init_recv_socket
+from Utils  import RECV_BUFFER
+from Packet import PacketGenerator, PacketExtractor
 
 localhost    = "localhost"#socket.gethostbyname(socket.gethostname())
 default_port = 8080

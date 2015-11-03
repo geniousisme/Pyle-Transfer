@@ -6,6 +6,7 @@ import sys
 from Utils import send_arg_parser
 from Utils import RECV_BUFFER
 from Utils import init_send_socket
+from Packet import PacketGenerator, PacketExtractor
 
 localhost    = "localhost"#socket.gethostbyname(socket.gethostname())
 default_port = 8080
@@ -17,6 +18,8 @@ class Sender(object):
           self.recv_addr   = (recv_ip, recv_port)
           self.sent_file   = open("test/test.txt", "rb")
           self.status      = None
+          self.pkt_gen     = PacketGenerator()
+          self.pkt_ext     = PacketExtractor()
 
       def send_file_response(self, recv_packet):
           start_pos = int(recv_packet.split(':')[1])
@@ -33,9 +36,14 @@ class Sender(object):
                                 select.select(self.connections, [], [], 1)
                     if read_sockets:
                         recv_packet, recv_addr = self.sender_sock.recvfrom(RECV_BUFFER)
+                        
                         if recv_packet == "I need a sender~":
-                            self.sender_sock.sendto("start file tranfer", recv_addr)
+                            packet = self.pkt_gen.generate_packet()
+                            # self.sender_sock.sendto("start file tranfer", recv_addr)
+                            self.sender_sock.sendto(packet, recv_addr)
+
                         elif "start_pos" in recv_packet:
+                            file_packet = self.
                             self.send_file_response(recv_packet)
                         else: # close request
                             self.sent_file.close()
