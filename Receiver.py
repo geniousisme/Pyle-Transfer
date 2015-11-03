@@ -44,7 +44,7 @@ class Receiver(object):
 
       def write_file_buffer(self, start_bytes, data_bytes):
           print "write file from %s byte" % start_bytes
-          print data_bytes
+          # print data_bytes
           print "data_len:", len(data_bytes)
           self.file_write.seek(start_bytes)
           self.file_write.write(data_bytes)
