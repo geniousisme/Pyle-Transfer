@@ -27,16 +27,6 @@ class Receiver(object):
           print "send open request"
           self.recv_sock.sendto("I need a sender~", self.send_addr)
 
-      # def read_file_response(self, send_packet):
-      #     print "write file from %s byte" % self.start_pos
-      #     self.file_write.seek(self.start_pos)
-      #     self.file_write.write(send_packet)
-      #     self.start_pos += RECV_BUFFER
-
-      # def send_file_request(self):
-      #     self.recv_sock.sendto("start_pos:" + str(self.start_pos), self.send_addr)
-      #     print "request file from %s byte" % self.start_pos
-
       def send_close_request(self, seq_num, ack_num, fin_flag):
           print "Sending Close Request..."
           packet = self.pkt_gen.generate_packet(seq_num, ack_num, fin_flag)
@@ -44,7 +34,6 @@ class Receiver(object):
 
       def write_file_buffer(self, start_bytes, data_bytes):
           print "write file from %s byte" % start_bytes
-          # print data_bytes
           print "data_len:", len(data_bytes)
           self.file_write.seek(start_bytes)
           self.file_write.write(data_bytes)
@@ -61,30 +50,43 @@ class Receiver(object):
                     read_sockets, write_sockets, error_sockets =               \
                                  select.select(self.connections, [], [], 1)
                     if read_sockets:
-                        send_packet, send_addr = self.recv_sock.recvfrom(RECV_BUFFER + HEADER_LENGTH)
+                        send_packet, send_addr = self.recv_sock.recvfrom       \
+                                                 (RECV_BUFFER + HEADER_LENGTH)
                         if send_packet == "start file tranfer":
                             is_sender_found = True
                             self.send_addr = send_addr
                             self.recv_sock.sendto("Come on!", self.send_addr)
                         else:
                             print "send_packet_len:", len(send_packet)
-                            header_params = self.pkt_ext.get_header_params_from_packet(send_packet)
-                            send_seq_num  = self.pkt_ext.get_seq_num(header_params)
-                            send_ack_num  = self.pkt_ext.get_ack_num(header_params)
-                            send_fin_flag = self.pkt_ext.get_fin_flag(header_params)
+                            header_params = self.pkt_ext                       \
+                                                .get_header_params_from_packet \
+                                                                   (send_packet)
+                            send_seq_num  = self.pkt_ext                       \
+                                                .get_seq_num(header_params)
+                            send_ack_num  = self.pkt_ext                       \
+                                                .get_ack_num(header_params)
+                            send_fin_flag = self.pkt_ext                       \
+                                                .get_fin_flag(header_params)
                             if send_fin_flag:
-                                send_data = self.pkt_ext.get_data_from_packet(send_packet)
+                                send_data = self.pkt_ext                       \
+                                                .get_data_from_packet          \
+                                                          (send_packet)
                                 self.write_file_buffer(send_seq_num, send_data)
-                                self.send_close_request(send_seq_num, send_ack_num, send_fin_flag)
+                                self.send_close_request                        \
+                                     (send_seq_num, send_ack_num, send_fin_flag)
                                 self.close_receiver()
                                 print "Delivery Completed!"
                             else:
-                                send_data = self.pkt_ext.get_data_from_packet(send_packet)
+                                send_data = self.pkt_ext                       \
+                                                .get_data_from_packet          \
+                                                         (send_packet)
                                 self.write_file_buffer(send_seq_num, send_data)
                                 seq_num  = send_ack_num
                                 ack_num  = send_ack_num + RECV_BUFFER
                                 fin_flag = 0
-                                packet = self.pkt_gen.generate_packet(seq_num, ack_num, fin_flag)
+                                packet = self.pkt_gen                          \
+                                             .generate_packet                  \
+                                             (seq_num, ack_num, fin_flag)
                                 self.recv_sock.sendto(packet, self.send_addr)
 
                 except KeyboardInterrupt, SystemExit:
