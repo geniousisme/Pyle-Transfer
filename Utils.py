@@ -3,9 +3,6 @@ import os
 import socket
 import sys
 
-
-RECV_BUFFER     = 576
-
 def recv_arg_parser(argv):
     if len(argv) < 6:
        print "length of arguments is not enough."
@@ -33,7 +30,7 @@ def send_arg_parser(argv):
                "recv_ip"     : argv[2],                                         \
                "recv_port"   : int(argv[3]),                                    \
                "send_port"   : int(argv[4]),                                    \
-               "log_filename": argv[5]                                          \
+               "log_filename": argv[5],                                         \
                "window_size" : int(argv[6])                                     \
               }
 
