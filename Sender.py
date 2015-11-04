@@ -35,6 +35,7 @@ class Sender(object):
           print "read file from %s byte" % start_bytes
           self.sent_file.seek(start_bytes)
           data_bytes = self.sent_file.read(RECV_BUFFER)
+          print "data_bytes", data_bytes
           print "data_len:", len(data_bytes)
           return data_bytes
 

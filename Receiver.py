@@ -35,6 +35,7 @@ class Receiver(object):
       def write_file_buffer(self, start_bytes, data_bytes):
           print "write file from %s byte" % start_bytes
           print "data_len:", len(data_bytes)
+          print "data_bytes", data_bytes
           self.file_write.seek(start_bytes)
           self.file_write.write(data_bytes)
 
@@ -82,7 +83,7 @@ class Receiver(object):
                                                          (send_packet)
                                 self.write_file_buffer(send_seq_num, send_data)
                                 seq_num  = send_ack_num
-                                ack_num  = send_ack_num + RECV_BUFFER
+                                ack_num  = send_seq_num + RECV_BUFFER
                                 fin_flag = 0
                                 packet = self.pkt_gen                          \
                                              .generate_packet                  \
