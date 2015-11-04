@@ -75,7 +75,7 @@ class Receiver(object):
                                 self.send_close_request                        \
                                      (send_seq_num, send_ack_num, send_fin_flag)
                                 self.close_receiver()
-                                print "Delivery Completed!"
+                                print "Delivery completed successfully"
                             else:
                                 send_data = self.pkt_ext                       \
                                                 .get_data_from_packet          \

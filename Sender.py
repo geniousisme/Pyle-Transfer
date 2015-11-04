@@ -22,6 +22,14 @@ class Sender(object):
           self.status      = None
           self.pkt_gen     = PacketGenerator(send_port, recv_port)
           self.pkt_ext     = PacketExtractor(send_port, recv_port)
+          self.segment_count = 0
+          self.retrans_count = 0
+
+      def retransmit_counter(self):
+          self.retrans_count += 1
+
+      def segment_counter(self):
+          self.segment_count += 1
 
       def read_file_buffer(self, start_bytes):
           print "read file from %s byte" % start_bytes
@@ -31,7 +39,6 @@ class Sender(object):
           return data_bytes
 
       def print_transfer_stats(self):
-          print "Delivery Completed Successfully."
           print "====== Transfering Stats ======="
           print "Total bytes sent:", self.file_size
           print "Segments sent =", 0
@@ -46,19 +53,20 @@ class Sender(object):
           is_receiver_found = False
           while self.status:
                 try:
-                    read_sockets, write_sockets, error_sockets =                \
+                    read_sockets, write_sockets, error_sockets =               \
                                 select.select(self.connections, [], [], 1)
                     if read_sockets:
-                        recv_packet, recv_addr = self.sender_sock.recvfrom      \
+                        recv_packet, recv_addr = self.sender_sock.recvfrom     \
                                                                   (RECV_BUFFER)
                         if recv_packet == "I need a sender~":
                             print "get sender request"
-                            self.sender_sock.sendto                             \
+                            self.sender_sock.sendto                            \
                                              ("start file tranfer", recv_addr)
                         elif recv_packet == "Come on!":
                             print "find receiver!!"
                             is_receiver_found = True
-                            seq_num = ack_num = fin_flag = 0 # inital
+                            seq_num = fin_flag = 0 # inital
+                            ack_num = RECV_BUFFER
                             self.recv_addr = recv_addr
                             data_bytes = self.read_file_buffer(seq_num)
                             self.send_file_response                            \
@@ -74,9 +82,9 @@ class Sender(object):
                             recv_fin_flag = self.pkt_ext                       \
                                                 .get_fin_flag(header_params)
                             if recv_fin_flag:
+                                print "Delivery completed successfully"
                                 self.print_transfer_stats()
                                 self.close_sender()
-                                print "Delivery Completed!"
                             else:
                                 seq_num  = recv_ack_num
                                 ack_num  = recv_seq_num + RECV_BUFFER
