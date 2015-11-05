@@ -14,7 +14,6 @@ CHECKSUM_POS  = 6
 URG_PTR_POS   = 7
 
 
-
 class PacketExtractor(object):
     def __init__(self, sorc_port, dest_port):
         self.sorc_port = sorc_port
