@@ -112,5 +112,5 @@ if __name__ == "__main__":
    ip, port, send_ip, send_port = localhost, default_port, localhost, default_port + 1
    # params = recv_arg_parser(sys.argv)
    # receiver = Receiver(**params)
-   receiver = Receiver(ip, port, send_ip, send_port, "test/received_test.pdf")
+   receiver = Receiver(ip, port, send_ip, send_port, "test/received_test.txt")
    receiver.run()

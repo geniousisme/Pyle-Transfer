@@ -113,5 +113,5 @@ class Sender(object):
 if __name__ == "__main__":
    ip, port, recv_ip, recv_port = localhost, default_port + 1, localhost, default_port
    # params = send_arg_parser(sys.argv)
-   sender = Sender(ip, port, recv_ip, recv_port, "test/test.pdf")
+   sender = Sender(ip, port, recv_ip, recv_port, "test/test.txt")
    sender.run()
