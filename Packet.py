@@ -13,11 +13,10 @@ WINDOW_POS    = 5
 CHECKSUM_POS  = 6
 URG_PTR_POS   = 7
 
-
-class PacketExtractor(object):
-    def __init__(self, sorc_port, dest_port):
-        self.sorc_port = sorc_port
-        self.dest_port = dest_port
+class Packet(object):
+    def __init__(self):
+        self.sorc_port = 0
+        self.dest_port = 0
 
         self.seq_num  = 0
         self.ack_num  = 0
@@ -27,6 +26,12 @@ class PacketExtractor(object):
 
         self.checksum = 0
         self.urg_ptr  = 0
+
+class PacketExtractor(Packet):
+    def __init__(self, sorc_port, dest_port):
+        super(PacketExtractor, self).__init__()
+        self.sorc_port = sorc_port
+        self.dest_port = dest_port
 
     def get_data_from_packet(self, packet):
         return packet[HEADER_LENGTH:]
@@ -52,19 +57,11 @@ class PacketExtractor(object):
     def is_checksum_correct(self, checksum):
         pass
 
-class PacketGenerator(object):
+class PacketGenerator(Packet):
     def __init__(self, sorc_port, dest_port):
+        super(PacketGenerator, self).__init__()
         self.sorc_port = sorc_port
         self.dest_port = dest_port
-
-        self.seq_num  = 0
-        self.ack_num  = 0
-
-        self.fin_flag = 0
-        self.window   = 0
-
-        self.checksum = 0
-        self.urg_ptr  = 0
 
     def generate_tcp_header(self, seq_num, ack_num, fin_flag):
         self.ack_num  = ack_num
@@ -85,5 +82,3 @@ class PacketGenerator(object):
 
     def generate_packet(self, seq_num, ack_num, fin_flag, user_data=""):
         return self.generate_tcp_header(seq_num, ack_num, fin_flag) + user_data
-
-
