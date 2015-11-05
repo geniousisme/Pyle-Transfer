@@ -4,66 +4,133 @@ import socket
 import sys
 
 from Utils import send_arg_parser
-from Utils import RECV_BUFFER
 from Utils import init_send_socket
 
-
-def argv_reader(argv):
-    if len(argv) < 3:
-       print "sender <filename> <remote_IP> <remote_port> <ack_port_num> <log_filename> <window_size>"
-       print "ex. sender file.txt 128.59.15.38 20000 20001 logfile.txt 1152"
-       sys.exit(1)
-    else:
-       return argv[1], int(argv[2])
+from Packet import RECV_BUFFER
+from Packet import PacketGenerator, PacketExtractor
 
 localhost    = "localhost"#socket.gethostbyname(socket.gethostname())
 default_port = 8080
 
 class Sender(object):
-      def __init__(self, ip, port, recv_ip, recv_port):
-          self.sender_sock = init_send_socket((ip, port))
+      def __init__(self, send_ip, send_port, recv_ip, recv_port,
+                   filename, window_size=1):
+          self.sender_sock = init_send_socket((send_ip, send_port))
           self.connections = [self.sender_sock]
           self.recv_addr   = (recv_ip, recv_port)
-          self.sent_file   = open("test.txt", "rb")
+          self.sent_file   = open(filename, "rb")
+          self.file_size   = os.path.getsize(filename)
+          self.window_size = window_size
+          self.status      = None
+          self.pkt_gen     = PacketGenerator(send_port, recv_port)
+          self.pkt_ext     = PacketExtractor(send_port, recv_port)
+          self.segment_count = 0
+          self.retrans_count = 0
 
-      def send_open_response(self):
-          self.sender_sock.sendto("lalalala", self.recv_addr)
+      def retransmit_counter(self):
+          self.retrans_count += 1
 
-      def send_file_response(self, recv_packet):
-          start_pos = int(recv_packet.split(':')[1])
-          self.sent_file.seek(start_pos)
-          read_buffer = self.sent_file.read(RECV_BUFFER)
-          self.sender_sock.sendto(read_buffer, self.recv_addr)
-          print "send file from %s bytes" % start_pos
+      def segment_counter(self):
+          self.segment_count += 1
+
+      def read_file_buffer(self, start_bytes):
+          print "read file from %s byte" % start_bytes
+          self.sent_file.seek(start_bytes)
+          data_bytes = self.sent_file.read(RECV_BUFFER)
+          # print "data_bytes", data_bytes
+          print "data_len:", len(data_bytes)
+          return data_bytes
+
+      def print_transfer_stats(self):
+          print "====== Transfering Stats ======="
+          print "Total bytes sent:", self.file_size
+          print "Segments sent =", self.segment_count
+          print "Segments Retranmitted =", self.retrans_count
+
+      def send_file_response(self, *pkt_params):
+          packet = self.pkt_gen.generate_packet(*pkt_params)
+          self.sender_sock.sendto(packet, self.recv_addr)
+
+      def send_initial_file_response(self):
+          for i in xrange(self.window_size):
+             seq_num = i * RECV_BUFFER
+             ack_num = seq_num + self.window_size * RECV_BUFFER
+             data_bytes = self.read_file_buffer(seq_num)
+             fin_flag = len(data_bytes) == 0
+             if fin_flag:
+                # means we already send all of data at initial stage,
+                # dont need to tranfer the rest of packet.
+                break
+             self.send_file_response(seq_num, ack_num, fin_flag, data_bytes)
+
 
       def sender_loop(self):
-          status = True;
-          while status:
+          self.start_sender()
+          is_receiver_found = False
+          while self.status:
                 try:
-                   read_sockets, write_sockets, error_sockets =                \
-                                 select.select(self.connections, [], [], 1)
-                   if read_sockets:
-                      recv_packet, recv_addr = self.sender_sock.recvfrom(RECV_BUFFER)
-                      if recv_packet == "I need a sender~":
-                         self.sender_sock.sendto("start file tranfer", recv_addr)
-                      elif "start_pos" in recv_packet:
-                         self.send_file_response(recv_packet)
-                      else: # close request
-                         self.sent_file.close()
-                         status = False
+                    read_sockets, write_sockets, error_sockets =               \
+                                select.select(self.connections, [], [], 1)
+                    if read_sockets:
+                        recv_packet, recv_addr = self.sender_sock.recvfrom     \
+                                                                  (RECV_BUFFER)
+                        if recv_packet == "I need a sender~":
+                            print "get sender request"
+                            self.sender_sock.sendto                            \
+                                ("start file tranfer:%s:%s" %                  \
+                                (self.window_size, self.file_size),            \
+                                 recv_addr)
+                        elif recv_packet == "Come on!":
+                            print "find receiver!!"
+                            is_receiver_found = True
+                            self.send_initial_file_response()
+                            # seq_num = fin_flag = 0 # inital
+                            # ack_num = RECV_BUFFER
+                            # self.recv_addr = recv_addr
+                            # data_bytes = self.read_file_buffer(seq_num)
+                            # self.send_file_response                          \
+                            #     (seq_num, ack_num, fin_flag, data_bytes)
+                        elif is_receiver_found:
+                            header_params = self.pkt_ext                       \
+                                                .get_header_params_from_packet \
+                                                                  (recv_packet)
+                            recv_seq_num  = self.pkt_ext                       \
+                                                .get_seq_num(header_params)
+                            recv_ack_num  = self.pkt_ext                       \
+                                                .get_ack_num(header_params)
+                            recv_fin_flag = self.pkt_ext                       \
+                                                .get_fin_flag(header_params)
+                            if recv_fin_flag:
+                                print "Delivery completed successfully"
+                                self.print_transfer_stats()
+                                self.close_sender()
+                            else:
+                                seq_num  = recv_ack_num
+                                ack_num  = recv_seq_num                        \
+                                           + RECV_BUFFER * self.window_size
+                                fin_flag = ack_num >= self.file_size
+                                data_bytes = self.read_file_buffer(seq_num)
+                                self.send_file_response                        \
+                                    (seq_num, ack_num, fin_flag, data_bytes)
 
                 except KeyboardInterrupt, SystemExit:
                        print "\nLeaving Pyle Transfer..."
-                       status = False
+                       self.close_sender()
+
           self.sender_sock.close()
 
+      def start_sender(self):
+          self.status = True
+
+      def close_sender(self):
+          self.sent_file.close()
+          self.status = False
+
       def run(self):
-          # self.send_file_response()
-          # self.send_open_response()
           self.sender_loop();
 
 if __name__ == "__main__":
    ip, port, recv_ip, recv_port = localhost, default_port + 1, localhost, default_port
-   send_arg_parser()
-   sender  = Sender(ip, port, recv_ip, recv_port)
+   # params = send_arg_parser(sys.argv)
+   sender = Sender(ip, port, recv_ip, recv_port, "test/test.jpeg", 1000)
    sender.run()

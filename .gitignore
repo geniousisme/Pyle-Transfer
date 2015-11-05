@@ -5,3 +5,4 @@
 *.txt
 .DS_Store
 test/*
+Proxy/*
