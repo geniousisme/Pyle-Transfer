@@ -48,6 +48,7 @@ class Sender(object):
           print "Segments Retranmitted =", self.retrans_count
 
       def send_file_response(self, *pkt_params):
+          self.segment_counter()
           packet = self.pkt_gen.generate_packet(*pkt_params)
           self.sender_sock.sendto(packet, self.recv_addr)
 
@@ -80,16 +81,12 @@ class Sender(object):
                                 ("start file tranfer:%s:%s" %                  \
                                 (self.window_size, self.file_size),            \
                                  recv_addr)
+
                         elif recv_packet == "Come on!":
                             print "find receiver!!"
                             is_receiver_found = True
                             self.send_initial_file_response()
-                            # seq_num = fin_flag = 0 # inital
-                            # ack_num = RECV_BUFFER
-                            # self.recv_addr = recv_addr
-                            # data_bytes = self.read_file_buffer(seq_num)
-                            # self.send_file_response                          \
-                            #     (seq_num, ack_num, fin_flag, data_bytes)
+
                         elif is_receiver_found:
                             header_params = self.pkt_ext                       \
                                                 .get_header_params_from_packet \

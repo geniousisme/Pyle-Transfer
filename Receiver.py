@@ -24,7 +24,6 @@ class Receiver(object):
           self.pkt_gen     = PacketGenerator(recv_port, send_port)
           self.pkt_ext     = PacketExtractor(recv_port, send_port)
 
-
       def send_open_request(self):
           print "send open request"
           self.recv_sock.sendto("I need a sender~", self.send_addr)
@@ -69,7 +68,6 @@ class Receiver(object):
                             self.send_addr   = send_addr
                             self.recv_sock.sendto("Come on!", self.send_addr)
                         else:
-                            # print "send_packet_len:", len(send_packet)
                             header_params = self.pkt_ext                       \
                                                 .get_header_params_from_packet \
                                                                    (send_packet)
