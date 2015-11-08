@@ -1,10 +1,10 @@
+import logging
 import os
 import select
 import socket
 import sys
 
-from Utils  import recv_arg_parser
-from Utils  import init_recv_socket
+from Utils  import recv_arg_parser, init_recv_socket, progress_bar
 
 from Packet import RECV_BUFFER, HEADER_LENGTH, calculate_checksum
 from Packet import PacketGenerator, PacketExtractor
@@ -25,19 +25,29 @@ class Receiver(object):
           self.pkt_ext     = PacketExtractor(recv_port, send_port)
           self.expected_ack = 0
 
+          self.logger = logging.getLogger("Receiver")
+          self.logger.setLevel(logging.INFO)
+
+          hd        = logging.StreamHandler()
+          formatter = logging.                                                  \
+                      Formatter                                                 \
+                      ("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+
+          hd.setFormatter(formatter)
+          self.logger.addHandler(hd)
+
       def send_open_request(self):
-          print "send open request"
+          self.logger.info("send open request")
           self.recv_sock.sendto("I need a sender~", self.send_addr)
 
       def send_close_request(self, seq_num, ack_num, fin_flag):
-          print "Sending Close Request..."
+          self.logger.info("Sending Close Request...")
           packet = self.pkt_gen.generate_packet(seq_num, ack_num, fin_flag)
           self.recv_sock.sendto(packet, self.send_addr)
 
       def write_file_buffer(self, start_bytes, data_bytes):
-          print "write file from %s byte" % start_bytes
-          print "data_len:", len(data_bytes)
-          # print "data_bytes", data_bytes
+          self.logger.debug("write file from %s byte" % start_bytes)
+          self.logger.debug("data_len: %s" % len(data_bytes))
           self.file_write.seek(start_bytes)
           self.file_write.write(data_bytes)
 
@@ -64,8 +74,8 @@ class Receiver(object):
                             self.window_size = int(self.window_size)
                             is_sender_found  = True
                             self.file_size   = int(self.file_size)
-                            print "window_size:", self.window_size
-                            print "file_size:", self.file_size
+                            self.logger.debug("window_size: %s" % self.window_size)
+                            self.logger.debug("file_size: %s" % self.file_size)
                             self.send_addr   = send_addr
                             self.recv_sock.sendto("Come on!", self.send_addr)
                         else:
@@ -91,31 +101,30 @@ class Receiver(object):
                             else:
                                 if self.expected_ack == send_seq_num and       \
                                    self.pkt_ext.is_checksum_valid(send_packet):
-                                    print "checksum:", send_checksum
-                                    send_data = self.pkt_ext                       \
-                                                    .get_data_from_packet          \
+                                    send_data = self.pkt_ext                   \
+                                                    .get_data_from_packet      \
                                                              (send_packet)
-                                    self.write_file_buffer(send_seq_num, send_data)
-                                    print "write_file_size:",                      \
-                                            os.path.getsize(self.file_write.name)
+                                    self.write_file_buffer                     \
+                                         (send_seq_num, send_data)
+                                    progress_bar(os.path.getsize(self.file_write.name), self.file_size)
                                     seq_num  = send_ack_num
-                                    ack_num  = send_seq_num                        \
+                                    ack_num  = send_seq_num                    \
                                                + RECV_BUFFER * self.window_size
-                                    print "seq_num", seq_num
-                                    print "ack_num", ack_num
+                                    self.logger.debug("seq_num: %s" % seq_num)
+                                    self.logger.debug("ack_num: %s" % ack_num)
                                     fin_flag = 0
-                                    packet = self.pkt_gen                          \
-                                                 .generate_packet                  \
+                                    packet = self.pkt_gen                      \
+                                                 .generate_packet              \
                                                  (seq_num, ack_num, fin_flag)
                                     self.recv_sock.sendto(packet, self.send_addr)
                                     self.expected_ack += RECV_BUFFER
                                 else:
-                                    print "expected_ack not correct or packet corrupted"
-                                    print "expected_ack:", self.expected_ack
-                                    print "send_seq_num:", send_seq_num, "ignore"
+                                    self.logger.debug("expected_ack not correct or packet corrupted")
+                                    self.logger.debug("expected_ack: %s" % self.expected_ack)
+                                    self.logger.debug("send_seq_num: %s, ignore" % send_seq_num)
 
                 except KeyboardInterrupt, SystemExit:
-                       print "\nLeaving Pyle Transfer Receiver..."
+                       print "\nLeaving Pyle-Transfer Receiver..."
                        self.close_receiver()
                        os.remove(self.file_write.name)
 
