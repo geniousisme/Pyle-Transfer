@@ -3,7 +3,7 @@ import struct
 # ! means network packet, I means short int(2 bytes), H means int(4 bytes)
 HEADER_FORMAT = "!HHIIHHHH"
 HEADER_LENGTH = 20
-RECV_BUFFER   = 576
+RECV_BUFFER   = 20
 SORC_PORT_POS = 0
 DEST_PORT_POS = 1
 SEQ_NUM_POS   = 2
@@ -12,6 +12,10 @@ FIN_FLAG_POS  = 4
 WINDOW_POS    = 5
 CHECKSUM_POS  = 6
 URG_PTR_POS   = 7
+
+def calculate_checksum(data_bytes):
+    return sum([ord(byte) for byte in data_bytes])
+
 
 class Packet(object):
     def __init__(self):
@@ -26,6 +30,11 @@ class Packet(object):
 
         self.checksum = 0
         self.urg_ptr  = 0
+
+class UnackedPacket(Packet):
+    def __init__(self, ack_num=None, time_stamp=None):
+        self.ack_num    = ack_num
+        self.begin_time = time_stamp
 
 class PacketExtractor(Packet):
     def __init__(self, sorc_port, dest_port):

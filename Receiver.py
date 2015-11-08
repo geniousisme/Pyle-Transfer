@@ -6,7 +6,7 @@ import sys
 from Utils  import recv_arg_parser
 from Utils  import init_recv_socket
 
-from Packet import RECV_BUFFER, HEADER_LENGTH
+from Packet import RECV_BUFFER, HEADER_LENGTH, calculate_checksum
 from Packet import PacketGenerator, PacketExtractor
 
 localhost    = "localhost"#socket.gethostbyname(socket.gethostname())
@@ -23,6 +23,7 @@ class Receiver(object):
           self.file_write  = open(filename, "wb+")
           self.pkt_gen     = PacketGenerator(recv_port, send_port)
           self.pkt_ext     = PacketExtractor(recv_port, send_port)
+          self.expected_ack = 0
 
       def send_open_request(self):
           print "send open request"
@@ -87,20 +88,28 @@ class Receiver(object):
                                 self.close_receiver()
                                 print "Delivery completed successfully"
                             else:
-                                send_data = self.pkt_ext                       \
-                                                .get_data_from_packet          \
-                                                         (send_packet)
-                                self.write_file_buffer(send_seq_num, send_data)
-                                print "write_file_size:",                      \
-                                        os.path.getsize(self.file_write.name)
-                                seq_num  = send_ack_num
-                                ack_num  = send_seq_num                        \
-                                           + RECV_BUFFER * self.window_size
-                                fin_flag = 0
-                                packet = self.pkt_gen                          \
-                                             .generate_packet                  \
-                                             (seq_num, ack_num, fin_flag)
-                                self.recv_sock.sendto(packet, self.send_addr)
+                                if self.expected_ack == send_seq_num:
+                                    send_data = self.pkt_ext                       \
+                                                    .get_data_from_packet          \
+                                                             (send_packet)
+                                    self.write_file_buffer(send_seq_num, send_data)
+                                    print "write_file_size:",                      \
+                                            os.path.getsize(self.file_write.name)
+                                    seq_num  = send_ack_num
+                                    ack_num  = send_seq_num                        \
+                                               + RECV_BUFFER * self.window_size
+                                    print "seq_num", seq_num
+                                    print "ack_num", ack_num
+                                    fin_flag = 0
+                                    packet = self.pkt_gen                          \
+                                                 .generate_packet                  \
+                                                 (seq_num, ack_num, fin_flag)
+                                    self.recv_sock.sendto(packet, self.send_addr)
+                                    self.expected_ack += RECV_BUFFER
+                                else:
+                                    print "expected_ack not correct !!!"
+                                    print "expected_ack:", self.expected_ack
+                                    print "send_seq_num:", send_seq_num, "ignore"
 
                 except KeyboardInterrupt, SystemExit:
                        print "\nLeaving Pyle Transfer Receiver..."
@@ -124,5 +133,5 @@ if __name__ == "__main__":
    ip, port, send_ip, send_port = localhost, default_port, localhost, default_port + 1
    # params = recv_arg_parser(sys.argv)
    # receiver = Receiver(**params)
-   receiver = Receiver(ip, port, send_ip, send_port, "test/received_test.jpeg")
+   receiver = Receiver(ip, port, send_ip, send_port, "test/received_test.pdf")
    receiver.run()
