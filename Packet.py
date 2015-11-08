@@ -13,6 +13,27 @@ WINDOW_POS    = 5
 CHECKSUM_POS  = 6
 URG_PTR_POS   = 7
 
+def calculate_checksum(seq_num, ack_num, fin_flag, data):
+    i = len(data)
+    # Handle the case where the length is odd
+    if (i & 1):
+        i -= 1
+        sum = ord(data[i])
+    else:
+        sum = 0
+
+    # Iterate through chars two by two and sum their byte values
+    while i > 0:
+        i -= 2
+        sum += (ord(data[i + 1]) << 8) + ord(data[i])
+
+    # Wrap overflow around
+    sum = (sum >> 16) + (sum & 0xffff)
+
+    result = (~ sum) & 0xffff  # One's complement
+    result = result >> 8 | ((result & 0xff) << 8)  # Swap bytes
+    return result
+
 class Packet(object):
     def __init__(self):
         self.sorc_port = 0
@@ -26,6 +47,11 @@ class Packet(object):
 
         self.checksum = 0
         self.urg_ptr  = 0
+
+class UnackedPacket(Packet):
+    def __init__(self, ack_num=None, time_stamp=None):
+        self.ack_num    = ack_num
+        self.begin_time = time_stamp
 
 class PacketExtractor(Packet):
     def __init__(self, sorc_port, dest_port):
@@ -54,8 +80,15 @@ class PacketExtractor(Packet):
     def is_valid_packet(self, recv_packet): # checksum stuffs
         pass
 
-    def is_checksum_correct(self, checksum):
-        pass
+    def is_checksum_valid(self, packet):
+        header_params = self.get_header_params_from_packet(packet)
+        data_bytes    = self.get_data_from_packet(packet)
+        seq_num  = self.get_seq_num(header_params)
+        ack_num  = self.get_ack_num(header_params)
+        fin_flag = self.get_fin_flag(header_params)
+        header_checksum = self.get_checksum(header_params)
+        return calculate_checksum(seq_num, ack_num, fin_flag, data_bytes) == header_checksum
+
 
 class PacketGenerator(Packet):
     def __init__(self, sorc_port, dest_port):
@@ -63,10 +96,11 @@ class PacketGenerator(Packet):
         self.sorc_port = sorc_port
         self.dest_port = dest_port
 
-    def generate_tcp_header(self, seq_num, ack_num, fin_flag):
+    def generate_tcp_header(self, seq_num, ack_num, fin_flag, user_data):
         self.ack_num  = ack_num
         self.seq_num  = seq_num
         self.fin_flag = fin_flag
+        self.checksum = calculate_checksum(seq_num, ack_num, fin_flag, user_data)
         tcp_header = struct.pack(                                             \
                                  HEADER_FORMAT,                               \
                                  self.sorc_port,                              \
@@ -81,4 +115,5 @@ class PacketGenerator(Packet):
         return tcp_header
 
     def generate_packet(self, seq_num, ack_num, fin_flag, user_data=""):
-        return self.generate_tcp_header(seq_num, ack_num, fin_flag) + user_data
+        return self.generate_tcp_header(seq_num, ack_num, fin_flag, user_data)\
+               + user_data

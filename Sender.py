@@ -2,14 +2,16 @@ import os
 import select
 import socket
 import sys
+import time
 
 from Utils import send_arg_parser
 from Utils import init_send_socket
 
-from Packet import RECV_BUFFER
-from Packet import PacketGenerator, PacketExtractor
+from Packet import RECV_BUFFER, calculate_checksum
+from Packet import PacketGenerator, PacketExtractor, UnackedPacket
 
-localhost    = "localhost"#socket.gethostbyname(socket.gethostname())
+TIME_OUT     = 0.5 # sec
+localhost    = socket.gethostbyname(socket.gethostname())
 default_port = 8080
 
 class Sender(object):
@@ -24,8 +26,9 @@ class Sender(object):
           self.status      = None
           self.pkt_gen     = PacketGenerator(send_port, recv_port)
           self.pkt_ext     = PacketExtractor(send_port, recv_port)
-          self.segment_count = 0
-          self.retrans_count = 0
+          self.segment_count  = 0
+          self.retrans_count  = 0
+          self.oldest_unacked_pkt = UnackedPacket()
 
       def retransmit_counter(self):
           self.retrans_count += 1
@@ -48,27 +51,58 @@ class Sender(object):
           print "Segments Retranmitted =", self.retrans_count
 
       def send_file_response(self, *pkt_params):
+          self.segment_counter()
           packet = self.pkt_gen.generate_packet(*pkt_params)
+          print "checksum:", calculate_checksum(*pkt_params)
           self.sender_sock.sendto(packet, self.recv_addr)
 
       def send_initial_file_response(self):
           for i in xrange(self.window_size):
              seq_num = i * RECV_BUFFER
              ack_num = seq_num + self.window_size * RECV_BUFFER
+             if i == 0:
+                self.oldest_unacked_pkt.ack_num = ack_num
+                self.oldest_unacked_pkt.begin_time = time.time()
              data_bytes = self.read_file_buffer(seq_num)
              fin_flag = len(data_bytes) == 0
              if fin_flag:
                 # means we already send all of data at initial stage,
                 # dont need to tranfer the rest of packet.
                 break
+             print "checksum:", calculate_checksum(seq_num, ack_num, fin_flag, data_bytes)
              self.send_file_response(seq_num, ack_num, fin_flag, data_bytes)
 
+      def retransmit_file_response(self):
+          print "retransmit!!!"
+          print "oldest_unacked_pkt:", self.oldest_unacked_pkt.ack_num
+          initial_seq = self.oldest_unacked_pkt.ack_num - self.window_size * RECV_BUFFER
+          for i in xrange(self.window_size):
+             self.retransmit_counter()
+             seq_num = initial_seq + i * RECV_BUFFER
+             print "retransmit_seq_num:", seq_num
+             ack_num = seq_num + self.window_size * RECV_BUFFER
+             print "retransmit_ack_num:", ack_num
+             if i == 0:
+                self.oldest_unacked_pkt.ack_num = ack_num
+                self.oldest_unacked_pkt.begin_time = time.time()
+             data_bytes = self.read_file_buffer(seq_num)
+             fin_flag = len(data_bytes) == 0
+             print "checksum:", calculate_checksum(seq_num, ack_num, fin_flag, data_bytes)
+             self.send_file_response(seq_num, ack_num, fin_flag, data_bytes)
+
+      def is_oldest_unacked_pkt_timeout(self):
+          if self.oldest_unacked_pkt.begin_time is None:
+            return False
+          return time.time() - self.oldest_unacked_pkt.begin_time >= TIME_OUT
 
       def sender_loop(self):
           self.start_sender()
           is_receiver_found = False
           while self.status:
                 try:
+                    if self.is_oldest_unacked_pkt_timeout():
+                        print "timeout!"
+                        self.retransmit_file_response()
                     read_sockets, write_sockets, error_sockets =               \
                                 select.select(self.connections, [], [], 1)
                     if read_sockets:
@@ -80,16 +114,12 @@ class Sender(object):
                                 ("start file tranfer:%s:%s" %                  \
                                 (self.window_size, self.file_size),            \
                                  recv_addr)
+
                         elif recv_packet == "Come on!":
                             print "find receiver!!"
                             is_receiver_found = True
                             self.send_initial_file_response()
-                            # seq_num = fin_flag = 0 # inital
-                            # ack_num = RECV_BUFFER
-                            # self.recv_addr = recv_addr
-                            # data_bytes = self.read_file_buffer(seq_num)
-                            # self.send_file_response                          \
-                            #     (seq_num, ack_num, fin_flag, data_bytes)
+
                         elif is_receiver_found:
                             header_params = self.pkt_ext                       \
                                                 .get_header_params_from_packet \
@@ -105,13 +135,24 @@ class Sender(object):
                                 self.print_transfer_stats()
                                 self.close_sender()
                             else:
-                                seq_num  = recv_ack_num
-                                ack_num  = recv_seq_num                        \
-                                           + RECV_BUFFER * self.window_size
-                                fin_flag = ack_num >= self.file_size
-                                data_bytes = self.read_file_buffer(seq_num)
-                                self.send_file_response                        \
-                                    (seq_num, ack_num, fin_flag, data_bytes)
+                                if self.oldest_unacked_pkt.ack_num == recv_seq_num:
+                                    print "oldest_unacked_pkt.num", self.oldest_unacked_pkt.ack_num
+                                    print "recv_seq_num", recv_seq_num
+                                    seq_num  = recv_ack_num
+                                    ack_num  = recv_seq_num                        \
+                                               + RECV_BUFFER * self.window_size
+                                    fin_flag = ack_num >= self.file_size
+                                    data_bytes = self.read_file_buffer(seq_num)
+                                    self.send_file_response                        \
+                                        (seq_num, ack_num, fin_flag, data_bytes)
+                                    self.oldest_unacked_pkt.ack_num += RECV_BUFFER
+                                    self.oldest_unacked_pkt.begin_time = time.time()
+                                    # time.sleep(2)
+                                else:
+                                    print "expected_ack not correct !!!"
+                                    print "oldest_unacked_pkt.num", self.oldest_unacked_pkt.ack_num
+                                    print "recv_seq_num", recv_seq_num, ", ignore"
+                                # else, ignore the packet
 
                 except KeyboardInterrupt, SystemExit:
                        print "\nLeaving Pyle Transfer..."
@@ -130,7 +171,7 @@ class Sender(object):
           self.sender_loop();
 
 if __name__ == "__main__":
-   ip, port, recv_ip, recv_port = localhost, default_port + 1, localhost, default_port
+   ip, port, recv_ip, recv_port = localhost, default_port, localhost, 41192
    # params = send_arg_parser(sys.argv)
-   sender = Sender(ip, port, recv_ip, recv_port, "test/test.jpeg", 1000)
+   sender = Sender(ip, port, recv_ip, recv_port, "test/test.pdf", 100)
    sender.run()
