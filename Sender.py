@@ -69,6 +69,7 @@ class Sender(object):
                 # means we already send all of data at initial stage,
                 # dont need to tranfer the rest of packet.
                 break
+             print "checksum:", calculate_checksum(seq_num, ack_num, fin_flag, data_bytes)
              self.send_file_response(seq_num, ack_num, fin_flag, data_bytes)
 
       def retransmit_file_response(self):
@@ -87,6 +88,7 @@ class Sender(object):
                 # means we already send all of data at initial stage,
                 # dont need to tranfer the rest of packet.
                 break
+             print "checksum:", calculate_checksum(seq_num, ack_num, fin_flag, data_bytes)
              self.send_file_response(seq_num, ack_num, fin_flag, data_bytes)
 
       def is_oldest_unacked_pkt_timeout(self):
@@ -142,12 +144,15 @@ class Sender(object):
                                                + RECV_BUFFER * self.window_size
                                     fin_flag = ack_num >= self.file_size
                                     data_bytes = self.read_file_buffer(seq_num)
-                                    print "checksum:", calculate_checksum(data_bytes)
                                     self.send_file_response                        \
                                         (seq_num, ack_num, fin_flag, data_bytes)
                                     self.oldest_unacked_pkt.ack_num += RECV_BUFFER
                                     self.oldest_unacked_pkt.begin_time = time.time()
                                     # time.sleep(2)
+                                else:
+                                    print "expected_ack not correct !!!"
+                                    print "oldest_unacked_pkt.num", self.oldest_unacked_pkt.ack_num
+                                    print "recv_seq_num", recv_seq_num, ", ignore"
                                 # else, ignore the packet
 
                 except KeyboardInterrupt, SystemExit:
@@ -169,5 +174,5 @@ class Sender(object):
 if __name__ == "__main__":
    ip, port, recv_ip, recv_port = localhost, default_port + 1, localhost, default_port
    # params = send_arg_parser(sys.argv)
-   sender = Sender(ip, port, recv_ip, recv_port, "test/test.pdf", 3)
+   sender = Sender(ip, port, recv_ip, recv_port, "test/test.txt", 100)
    sender.run()

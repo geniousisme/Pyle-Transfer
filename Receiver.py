@@ -78,6 +78,7 @@ class Receiver(object):
                                                 .get_ack_num(header_params)
                             send_fin_flag = self.pkt_ext                       \
                                                 .get_fin_flag(header_params)
+                            send_checksum = self.pkt_ext.get_checksum(header_params)
                             if send_fin_flag and self.is_write_file_completed():
                                 send_data = self.pkt_ext                       \
                                                 .get_data_from_packet          \
@@ -88,7 +89,10 @@ class Receiver(object):
                                 self.close_receiver()
                                 print "Delivery completed successfully"
                             else:
-                                if self.expected_ack == send_seq_num:
+                                if self.expected_ack == send_seq_num and       \
+                                       self.pkt_ext                            \
+                                           .is_checksum_correct(send_packet):
+                                    print "checksum:", send_checksum
                                     send_data = self.pkt_ext                       \
                                                     .get_data_from_packet          \
                                                              (send_packet)
@@ -107,7 +111,7 @@ class Receiver(object):
                                     self.recv_sock.sendto(packet, self.send_addr)
                                     self.expected_ack += RECV_BUFFER
                                 else:
-                                    print "expected_ack not correct !!!"
+                                    print "expected_ack not correct or packet corrupted"
                                     print "expected_ack:", self.expected_ack
                                     print "send_seq_num:", send_seq_num, "ignore"
 
@@ -133,5 +137,5 @@ if __name__ == "__main__":
    ip, port, send_ip, send_port = localhost, default_port, localhost, default_port + 1
    # params = recv_arg_parser(sys.argv)
    # receiver = Receiver(**params)
-   receiver = Receiver(ip, port, send_ip, send_port, "test/received_test.pdf")
+   receiver = Receiver(ip, port, send_ip, send_port, "test/received_test.txt")
    receiver.run()
