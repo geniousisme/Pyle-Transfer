@@ -4,7 +4,7 @@ import select
 import socket
 import sys
 
-from Utils  import recv_arg_parser, init_recv_socket, 
+from Utils  import recv_arg_parser, init_recv_socket, progress_bar
 
 from Packet import RECV_BUFFER, HEADER_LENGTH, calculate_checksum
 from Packet import PacketGenerator, PacketExtractor
@@ -106,6 +106,7 @@ class Receiver(object):
                                                              (send_packet)
                                     self.write_file_buffer                     \
                                          (send_seq_num, send_data)
+                                    progress_bar(os.path.getsize(self.file_write.name), self.file_size)
                                     seq_num  = send_ack_num
                                     ack_num  = send_seq_num                    \
                                                + RECV_BUFFER * self.window_size
@@ -123,7 +124,7 @@ class Receiver(object):
                                     self.logger.debug("send_seq_num: %s, ignore" % send_seq_num)
 
                 except KeyboardInterrupt, SystemExit:
-                       print "\nLeaving Pyle Transfer Receiver..."
+                       print "\nLeaving Pyle-Transfer Receiver..."
                        self.close_receiver()
                        os.remove(self.file_write.name)
 
@@ -144,5 +145,5 @@ if __name__ == "__main__":
    ip, port, send_ip, send_port = localhost, default_port + 2, localhost, default_port
    # params = recv_arg_parser(sys.argv)
    # receiver = Receiver(**params)
-   receiver = Receiver(ip, port, send_ip, send_port, "test/received_test.txt")
+   receiver = Receiver(ip, port, send_ip, send_port, "test/received_test.pdf")
    receiver.run()
