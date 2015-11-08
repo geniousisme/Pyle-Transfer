@@ -9,7 +9,7 @@ from Utils  import init_recv_socket
 from Packet import RECV_BUFFER, HEADER_LENGTH, calculate_checksum
 from Packet import PacketGenerator, PacketExtractor
 
-localhost    = "localhost"#socket.gethostbyname(socket.gethostname())
+localhost    = socket.gethostbyname(socket.gethostname())
 default_port = 8080
 
 class Receiver(object):
@@ -89,10 +89,8 @@ class Receiver(object):
                                 self.close_receiver()
                                 print "Delivery completed successfully"
                             else:
-                                if self.expected_ack == send_seq_num:
-                                    # and       \
-                                    #    self.pkt_ext                            \
-                                    #        .is_checksum_correct(send_packet):
+                                if self.expected_ack == send_seq_num and       \
+                                   self.pkt_ext.is_checksum_valid(send_packet):
                                     print "checksum:", send_checksum
                                     send_data = self.pkt_ext                       \
                                                     .get_data_from_packet          \
@@ -135,7 +133,7 @@ class Receiver(object):
 
 if __name__ == "__main__":
    # addr, port = argv_reader(sys.argv)
-   ip, port, send_ip, send_port = localhost, default_port, localhost, default_port + 1
+   ip, port, send_ip, send_port = localhost, default_port + 2, localhost, default_port
    # params = recv_arg_parser(sys.argv)
    # receiver = Receiver(**params)
    receiver = Receiver(ip, port, send_ip, send_port, "test/received_test.pdf")

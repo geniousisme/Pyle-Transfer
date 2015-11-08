@@ -80,7 +80,7 @@ class PacketExtractor(Packet):
     def is_valid_packet(self, recv_packet): # checksum stuffs
         pass
 
-    def is_checksum_correct(self, packet):
+    def is_checksum_valid(self, packet):
         header_params = self.get_header_params_from_packet(packet)
         data_bytes    = self.get_data_from_packet(packet)
         seq_num  = self.get_seq_num(header_params)

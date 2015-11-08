@@ -10,9 +10,8 @@ from Utils import init_send_socket
 from Packet import RECV_BUFFER, calculate_checksum
 from Packet import PacketGenerator, PacketExtractor, UnackedPacket
 
-TIME_OUT     = 1 # 1 sec for timeout
-
-localhost    = "localhost"#socket.gethostbyname(socket.gethostname())
+TIME_OUT     = 0.5 # sec
+localhost    = socket.gethostbyname(socket.gethostname())
 default_port = 8080
 
 class Sender(object):
@@ -172,7 +171,7 @@ class Sender(object):
           self.sender_loop();
 
 if __name__ == "__main__":
-   ip, port, recv_ip, recv_port = localhost, default_port + 1, localhost, default_port
+   ip, port, recv_ip, recv_port = localhost, default_port, localhost, 41192
    # params = send_arg_parser(sys.argv)
-   sender = Sender(ip, port, recv_ip, recv_port, "test/test.pdf", 1000)
+   sender = Sender(ip, port, recv_ip, recv_port, "test/test.pdf", 100)
    sender.run()
