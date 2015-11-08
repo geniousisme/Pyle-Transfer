@@ -45,3 +45,12 @@ def init_send_socket(address):
     udp_socket.bind(address)
     udp_socket.setblocking(True)
     return udp_socket
+
+def progress_bar(curr_filesize, filesize):
+    progress = curr_filesize * 100.0 / filesize
+    sys.stdout.write('\r')
+    # the exact output you're looking for:
+    sys.stdout.write("[%-100s] %d%%" % ('=' * progress, progress))
+    sys.stdout.flush()
+    sleep(0.1)
+    sys.stdout.write('\n')

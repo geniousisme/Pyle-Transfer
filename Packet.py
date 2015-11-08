@@ -13,23 +13,20 @@ WINDOW_POS    = 5
 CHECKSUM_POS  = 6
 URG_PTR_POS   = 7
 
-def calculate_checksum(seq_num, ack_num, fin_flag, data):
-    i = len(data)
+def calculate_checksum(seq_num, ack_num, fin_flag, data_bytes):
+    data_len = len(data_bytes)
     # Handle the case where the length is odd
-    if (i & 1):
-        i -= 1
-        sum = ord(data[i])
+    if (data_len & 1):
+        data_len -= 1
+        sum = ord(data_bytes[data_len])
     else:
         sum = 0
-
     # Iterate through chars two by two and sum their byte values
-    while i > 0:
-        i -= 2
-        sum += (ord(data[i + 1]) << 8) + ord(data[i])
-
+    while data_len > 0:
+        data_len -= 2
+        sum += (ord(data_bytes[data_len + 1]) << 8) + ord(data_bytes[data_len])
     # Wrap overflow around
     sum = (sum >> 16) + (sum & 0xffff)
-
     result = (~ sum) & 0xffff  # One's complement
     result = result >> 8 | ((result & 0xff) << 8)  # Swap bytes
     return result
@@ -76,9 +73,6 @@ class PacketExtractor(Packet):
 
     def get_checksum(self, header_params):
         return header_params[CHECKSUM_POS]
-
-    def is_valid_packet(self, recv_packet): # checksum stuffs
-        pass
 
     def is_checksum_valid(self, packet):
         header_params = self.get_header_params_from_packet(packet)
