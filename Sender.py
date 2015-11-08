@@ -54,6 +54,7 @@ class Sender(object):
       def send_file_response(self, *pkt_params):
           self.segment_counter()
           packet = self.pkt_gen.generate_packet(*pkt_params)
+          print "checksum:", calculate_checksum(*pkt_params)
           self.sender_sock.sendto(packet, self.recv_addr)
 
       def send_initial_file_response(self):
@@ -74,20 +75,19 @@ class Sender(object):
 
       def retransmit_file_response(self):
           print "retransmit!!!"
-          self.retransmit_counter()
+          print "oldest_unacked_pkt:", self.oldest_unacked_pkt.ack_num
           initial_seq = self.oldest_unacked_pkt.ack_num - self.window_size * RECV_BUFFER
           for i in xrange(self.window_size):
+             self.retransmit_counter()
              seq_num = initial_seq + i * RECV_BUFFER
+             print "retransmit_seq_num:", seq_num
              ack_num = seq_num + self.window_size * RECV_BUFFER
+             print "retransmit_ack_num:", ack_num
              if i == 0:
                 self.oldest_unacked_pkt.ack_num = ack_num
                 self.oldest_unacked_pkt.begin_time = time.time()
              data_bytes = self.read_file_buffer(seq_num)
              fin_flag = len(data_bytes) == 0
-             if fin_flag:
-                # means we already send all of data at initial stage,
-                # dont need to tranfer the rest of packet.
-                break
              print "checksum:", calculate_checksum(seq_num, ack_num, fin_flag, data_bytes)
              self.send_file_response(seq_num, ack_num, fin_flag, data_bytes)
 
@@ -174,5 +174,5 @@ class Sender(object):
 if __name__ == "__main__":
    ip, port, recv_ip, recv_port = localhost, default_port + 1, localhost, default_port
    # params = send_arg_parser(sys.argv)
-   sender = Sender(ip, port, recv_ip, recv_port, "test/test.txt", 100)
+   sender = Sender(ip, port, recv_ip, recv_port, "test/test.pdf", 1000)
    sender.run()

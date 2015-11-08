@@ -89,9 +89,10 @@ class Receiver(object):
                                 self.close_receiver()
                                 print "Delivery completed successfully"
                             else:
-                                if self.expected_ack == send_seq_num and       \
-                                       self.pkt_ext                            \
-                                           .is_checksum_correct(send_packet):
+                                if self.expected_ack == send_seq_num:
+                                    # and       \
+                                    #    self.pkt_ext                            \
+                                    #        .is_checksum_correct(send_packet):
                                     print "checksum:", send_checksum
                                     send_data = self.pkt_ext                       \
                                                     .get_data_from_packet          \
@@ -137,5 +138,5 @@ if __name__ == "__main__":
    ip, port, send_ip, send_port = localhost, default_port, localhost, default_port + 1
    # params = recv_arg_parser(sys.argv)
    # receiver = Receiver(**params)
-   receiver = Receiver(ip, port, send_ip, send_port, "test/received_test.txt")
+   receiver = Receiver(ip, port, send_ip, send_port, "test/received_test.pdf")
    receiver.run()

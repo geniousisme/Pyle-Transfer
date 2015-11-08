@@ -33,9 +33,6 @@ def calculate_checksum(seq_num, ack_num, fin_flag, data):
     result = (~ sum) & 0xffff  # One's complement
     result = result >> 8 | ((result & 0xff) << 8)  # Swap bytes
     return result
-    # checksum_val = seq_num + ack_num + fin_flag +                              \
-    #                sum([ord(byte) for byte in data])
-    # return checksum_val
 
 class Packet(object):
     def __init__(self):
@@ -104,7 +101,6 @@ class PacketGenerator(Packet):
         self.seq_num  = seq_num
         self.fin_flag = fin_flag
         self.checksum = calculate_checksum(seq_num, ack_num, fin_flag, user_data)
-        print "self.checksum", self.checksum
         tcp_header = struct.pack(                                             \
                                  HEADER_FORMAT,                               \
                                  self.sorc_port,                              \
