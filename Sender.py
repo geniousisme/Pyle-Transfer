@@ -64,7 +64,6 @@ class Sender(object):
                 break
              self.send_file_response(seq_num, ack_num, fin_flag, data_bytes)
 
-
       def sender_loop(self):
           self.start_sender()
           is_receiver_found = False

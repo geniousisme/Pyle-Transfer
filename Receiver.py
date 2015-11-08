@@ -91,7 +91,8 @@ class Receiver(object):
                                                 .get_data_from_packet          \
                                                          (send_packet)
                                 self.write_file_buffer(send_seq_num, send_data)
-                                print "write_file_size:", os.path.getsize(self.file_write.name)
+                                print "write_file_size:",                      \
+                                        os.path.getsize(self.file_write.name)
                                 seq_num  = send_ack_num
                                 ack_num  = send_seq_num                        \
                                            + RECV_BUFFER * self.window_size
