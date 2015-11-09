@@ -178,6 +178,7 @@ class Sender(object):
 
 if __name__ == "__main__":
    ip, port, recv_ip, recv_port = localhost, default_port, localhost, 41192
-   # params = send_arg_parser(sys.argv)
+   params = send_arg_parser(sys.argv)
    sender = Sender(ip, port, recv_ip, recv_port, "test/test.pdf", 1000)
    sender.run()
+   # 160.39.227.140 with port 8082
