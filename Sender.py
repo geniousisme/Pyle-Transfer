@@ -17,20 +17,27 @@ default_port = 8080
 
 class Sender(object):
       def __init__(self, send_ip, send_port, recv_ip, recv_port,
-                   filename, window_size=1):
+                   filename, log_name="send_log.txt", window_size=1):
           self.sender_sock = init_send_socket((send_ip, send_port))
           self.connections = [self.sender_sock]
           self.recv_addr   = (recv_ip, recv_port)
+
           self.sent_file   = open(filename, "rb")
+          # self.log_file    = open(log_name,  "w")
           self.file_size   = os.path.getsize(filename)
+
           self.window_size = window_size
           self.status      = None
+
           self.pkt_gen     = PacketGenerator(send_port, recv_port)
           self.pkt_ext     = PacketExtractor(send_port, recv_port)
+
           self.segment_count  = 0
           self.retrans_count  = 0
+
           self.oldest_unacked_pkt = UnackedPacket()
 
+          # logging module init
           self.logger = logging.getLogger("Sender")
           self.logger.setLevel(logging.INFO)
 
@@ -76,10 +83,10 @@ class Sender(object):
                 self.oldest_unacked_pkt.begin_time = time.time()
              data_bytes = self.read_file_buffer(seq_num)
              fin_flag = len(data_bytes) == 0
-             if fin_flag:
-                # means we already send all of data at initial stage,
-                # dont need to tranfer the rest of packet.
-                break
+             # if fin_flag:
+             #    # means we already send all of data at initial stage,
+             #    # dont need to tranfer the rest of packet.
+             #    break
              self.send_file_response(seq_num, ack_num, fin_flag, data_bytes)
 
       def retransmit_file_response(self):

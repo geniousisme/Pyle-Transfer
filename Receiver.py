@@ -13,7 +13,8 @@ localhost    = socket.gethostbyname(socket.gethostname())
 default_port = 8080
 
 class Receiver(object):
-      def __init__(self, recv_ip, recv_port, send_ip, send_port, filename):
+      def __init__(self, recv_ip, recv_port, send_ip, send_port,               \
+                         filename, log_name="recv_log.txt"):
           self.recv_sock   = init_recv_socket((recv_ip, recv_port))
           self.connections = [self.recv_sock]
           self.recv_ip     = recv_ip
@@ -21,6 +22,7 @@ class Receiver(object):
           self.window_size = 1
           self.send_addr   = (send_ip, int(send_port))
           self.file_write  = open(filename, "wb+")
+          # self.log_file    = open(log_name, "w")
           self.pkt_gen     = PacketGenerator(recv_port, send_port)
           self.pkt_ext     = PacketExtractor(recv_port, send_port)
           self.expected_ack = 0
@@ -29,15 +31,15 @@ class Receiver(object):
           self.logger.setLevel(logging.INFO)
 
           hd        = logging.StreamHandler()
-          formatter = logging.                                                  \
-                      Formatter                                                 \
+          formatter = logging.                                                 \
+                      Formatter                                                \
                       ("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
           hd.setFormatter(formatter)
           self.logger.addHandler(hd)
 
       def send_open_request(self):
-          self.logger.info("send open request")
+          self.logger.debug("send open request")
           self.recv_sock.sendto("I need a sender~", self.send_addr)
 
       def send_close_request(self, seq_num, ack_num, fin_flag):
