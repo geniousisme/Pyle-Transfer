@@ -54,18 +54,20 @@ To run the program:
 
 *python Client.py server_ip port_number
 
-### How do I test it?
+### Implemented commands
 ------
 
-I use Proxy provided by TA, use following command to test my program:
+|commands                       |Functionality                                 |
+|-------------------------------|----------------------------------------------|
+|whoelse                        |Displays name of other connected users        |
+|wholast [number]               |Displays name of those users connected within the last [number] minutes. Let 0 < number < 60|
+|broadcast message [message]    |Broadcasts [message] to all connected users   |
+|broadcast user [user] [user]... [user] message [message]|Broadcasts [message] to the list of users      |
+|message [user] [message]       |Private [message] to a [user]                 |
+|logout                         |Log out this user.                            |
 
-./newudpl -i192.168.0.3:8080 -o192.168.0.3:8082 -B30000 -L50 -O30 -d0.6
 
-No matter in data loss situation, data corrupted, or data delay situation,
-my program can always recover from the situations.
-
-
-#### Hope you enjoy Pyle-Transfer !!!
+#### Hope you enjoy PyTalk!!!
 ![Hope you like it](http://cdn0.vox-cdn.com/assets/5057232/kerley_dance.gif)
 
 =======
