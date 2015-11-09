@@ -13,7 +13,7 @@ localhost    = socket.gethostbyname(socket.gethostname())
 default_port = 8080
 
 class Receiver(object):
-      def __init__(self, recv_ip, recv_port, send_ip, send_port, filenamem):
+      def __init__(self, recv_ip, recv_port, send_ip, send_port, filename):
           self.recv_sock   = init_recv_socket((recv_ip, recv_port))
           self.connections = [self.recv_sock]
           self.recv_ip     = recv_ip
