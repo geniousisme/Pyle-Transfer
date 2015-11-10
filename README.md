@@ -1,69 +1,97 @@
 # Pyle-Transfer
 ### Computer Networks Programming Assignment 2: UDP File Transfer
 
-### Description
+#### Program Overview
+------
 
-PyTalk includes 6 files:
+This program implements a TCP-like protocol on top of UDP. It support variable window size, and can recover from data loss, data corruption, and data delay. Basically, I implement the TCP 20 bytes header as follow:
 
-- main program files: utils.py, user.py, Client.py, Server.py
+[ Source port ][ Dest port  ]
+[     Sequence Number       ]
+[  Acknowledgement Number   ]
+[  Flags    ][Receive window]
+[ Checksum  ][  Urgent ptr  ]
+[ Data Data Data Data  .... ]
 
-1. utils.py:
+I use timeout mechanism to prevent the dealy, and use checksum to check if the packer is cirrupted, and use ack number & sequence number to check if the packet id inorder or not. For supporting the variable window size, I implement GBN mechanism in my program.
 
-  class for utility function
-  Like message parser, connecting server,
-  and all the variable(TIME_OUT, BLOCK_TIME, etc...)
-  that would be used in server and client.
+#### Code Description
+------
 
-2. user.py:
+Pyle-Tranfer includes 4 files:
 
-  class for every PyTalk user of the chat room.
-  It defines a user that has a username, socket, ip,
-  and its active_time allow us to use user object
-  directly to do several things without confusion.
+- main program files: Utils.py, Packet.py, receiver.py, sender.py
 
-3. client.py:
+1. Utils.py:
 
-  class for PyTalk client side. Basically client doesn't do
-  too many complicated things. It just receive the message
-  sent from server, and make the move(ex. send message or
-  exit PyTalk) with different message.
+  Implement several handy utility function in this file. Like progress_bar,
+  argv parser, and socket initialization.
 
-4. server.py:
+2. Packet.py
 
-  class for PyTalk server side. Server will recieve all
-  the message sent from client. It will decide the client
-  login sucessfully or not(and is user repeated or need to
-  block too), and what kind of messag client send and decide
-  what kind of action to do with different income message.
+  Packet.py contains PacketGenerator and PacketExtractor, PacketGenerator is to
+  generate packet, including headers and data; PacketExtractor is responsible for
+  extracting the information in the packet, and also checking checksum of the packet.
 
-- other files: user_pass.txt, Makefile.
+3. receiver.py
 
-1. user_pass.txt: has all the credentials to access the chat.
-2. Makefile: nothing there, just some echo message.
+  Collect the sender's datagram packet, checks for corrupted information and
+  that the received packet is in-order or not. If there is something wrong, then it will ignore the packets and following packets, and then wait for the retransmission from sender.
 
-### How to use it?
+4. sender.py:
+
+  Read from the file and sends the data bytes to the designated receiver.
+  And it will waits for the corresponding ACK response before continuing in the transmission process. If no such ACKs during the time period, the Sender will retransmit the packet.
+
+For the log_filename, if it is stdout, it will log to stdout.
+
+- other files: Makefile.
+
+1. Makefile: nothing there, just some echo message.
+
+#### How to use it?
 ------
 
 To run the program:
 
-1. Start the server with the port number that you want to use.
+1. Start the receiver.py with the port number that you want to use, and also other parameters:
 
-*python Server.py port_number
+*python receiver.py <filename> <listening_port> <sender_IP> <sender_port> <log_filename>
 
-2. Start the client with the ip number provided by the server and the same port number.
+2. Start the sender.py:
 
-*python Client.py server_ip port_number
+*python sender.py <filename> <remote_IP> <remote_port> <ack_port_num> <log_filename> <window_size>
 
-### How do I test it?
+#### How do I test it?
 ------
 
 I use Proxy provided by TA, use following command to test my program:
 
+0. start the proxy emulator:
 ./newudpl -i192.168.0.3:8080 -o192.168.0.3:8082 -B30000 -L50 -O30 -d0.6
+
+1. invoke receiver:
+python Receiver.py test/received.pdf 8082 192.168.0.3 8080 log/recv_log.txt
+
+2. invoke sender:
+python Sender.py test/test.pdf 192.168.0.3 41192 8080 log/send_log.txt 1000
 
 No matter in data loss situation, data corrupted, or data delay situation,
 my program can always recover from the situations.
 
+#### Extra Feature:
+------
+1. Integrate logging module into this program, if you want to see the effect you can add "debug" at the end of commands for invoking sender or receiver, then you can feel the strength of logging module
+
+2. Progrss bar implementation:
+Since there is nothing to see when receiver is receiving things, which is borning and confusing, especially when you use high error rate, high delay time, or high data loss to test your code. So I think if I have a prgress bar on my receiver side then I can know how the progress goes.
+
+It will looks like this when receiver is receiving the file from sender:
+
+File Delivering...[==============                                    ] 29%
+
+Remember to widen your terminal more than 80 pixel, or it will look funny.
+------
 
 #### Hope you enjoy Pyle-Transfer !!!
 ![Hope you like it](http://cdn0.vox-cdn.com/assets/5057232/kerley_dance.gif)
