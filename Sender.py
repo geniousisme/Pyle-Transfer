@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 import select
@@ -16,21 +17,33 @@ localhost    = socket.gethostbyname(socket.gethostname())
 default_port = 8080
 
 class Sender(object):
-      def __init__(self, send_ip, send_port, recv_ip, recv_port,
-                   filename, window_size=1, log_name):
+      def __init__(self, send_ip=localhost, send_port=default_port,            \
+                         recv_ip=localhost, recv_port=default_port+2,          \
+                         filename="test/test.pdf",                             \
+                         log_name="send_log.txt", window_size=1):
+          self.send_addr   = (send_ip, send_port)
           self.sender_sock = init_send_socket((send_ip, send_port))
           self.connections = [self.sender_sock]
           self.recv_addr   = (recv_ip, recv_port)
           self.sent_file   = open(filename, "rb")
+          self.log_file    = [sys.stdout, open(log_name, "w")]                 \
+                             [log_name != "stdout"]
           self.file_size   = os.path.getsize(filename)
+
           self.window_size = window_size
           self.status      = None
+
           self.pkt_gen     = PacketGenerator(send_port, recv_port)
           self.pkt_ext     = PacketExtractor(send_port, recv_port)
+
           self.segment_count  = 0
           self.retrans_count  = 0
+
+          self.send_time      = 0
+
           self.oldest_unacked_pkt = UnackedPacket()
 
+          # logging module init
           self.logger = logging.getLogger("Sender")
           self.logger.setLevel(logging.INFO)
 
@@ -76,11 +89,12 @@ class Sender(object):
                 self.oldest_unacked_pkt.begin_time = time.time()
              data_bytes = self.read_file_buffer(seq_num)
              fin_flag = len(data_bytes) == 0
-             if fin_flag:
-                # means we already send all of data at initial stage,
-                # dont need to tranfer the rest of packet.
-                break
+             # if fin_flag:
+             #    # means we already send all of data at initial stage,
+             #    # dont need to tranfer the rest of packet.
+             #    break
              self.send_file_response(seq_num, ack_num, fin_flag, data_bytes)
+          self.send_time = time.time()
 
       def retransmit_file_response(self):
           self.logger.debug("retransmit!!!")
@@ -100,6 +114,7 @@ class Sender(object):
              data_bytes = self.read_file_buffer(seq_num)
              fin_flag = len(data_bytes) == 0
              self.send_file_response(seq_num, ack_num, fin_flag, data_bytes)
+          self.send_time = time.time()
 
       def is_oldest_unacked_pkt_timeout(self):
           if self.oldest_unacked_pkt.begin_time is None:
@@ -109,6 +124,9 @@ class Sender(object):
       def sender_loop(self):
           self.start_sender()
           is_receiver_found = False
+          estimated_rtt = 0
+          print "start Pyle Transfer Sender on %s with port %s ..."          \
+                                        % self.send_addr
           while self.status:
                 try:
                     if self.is_oldest_unacked_pkt_timeout():
@@ -124,10 +142,13 @@ class Sender(object):
                                 ("start file tranfer:%s:%s" %                  \
                                 (self.window_size, self.file_size),            \
                                  recv_addr)
+                            self.send_time = time.time()
 
                         elif recv_packet == "Come on!":
+                            estimated_rtt = time.time() - self.send_time
                             is_receiver_found = True
                             self.send_initial_file_response()
+
 
                         elif is_receiver_found:
                             header_params = self.pkt_ext                       \
@@ -139,12 +160,27 @@ class Sender(object):
                                                 .get_ack_num(header_params)
                             recv_fin_flag = self.pkt_ext                       \
                                                 .get_fin_flag(header_params)
+                            log = str(datetime.datetime.now()) + " " +         \
+                                  str(self.recv_addr[1]) + " " +               \
+                                  str(self.send_addr[1]) + " " +               \
+                                  str(recv_seq_num) + " " +                    \
+                                  str(recv_ack_num)
                             if recv_fin_flag:
+                                log += " ACK FIN"
+                                sample_rtt = time.time() - self.send_time
+                                estimated_rtt = estimated_rtt * 0.875 + sample_rtt * 0.125
+                                log += " " + str(estimated_rtt) + "\n"
+                                self.log_file.write(log)
                                 print "Delivery completed successfully"
                                 self.print_transfer_stats()
                                 self.close_sender()
                             else:
+                                log += " ACK"
                                 if self.oldest_unacked_pkt.ack_num == recv_seq_num:
+                                    sample_rtt = time.time() - self.send_time
+                                    estimated_rtt = estimated_rtt * 0.875 + sample_rtt * 0.125
+                                    log += " " + str(estimated_rtt) + "\n"
+                                    self.log_file.write(log)
                                     seq_num  = recv_ack_num
                                     ack_num  = recv_seq_num                    \
                                                + RECV_BUFFER * self.window_size
@@ -155,6 +191,10 @@ class Sender(object):
                                     self.oldest_unacked_pkt.ack_num += RECV_BUFFER
                                     self.oldest_unacked_pkt.begin_time = time.time()
                                 else:
+                                    sample_rtt = time.time() - self.send_time
+                                    estimated_rtt = estimated_rtt * 0.875 + sample_rtt * 0.125
+                                    log += " " + str(estimated_rtt) + "\n"
+                                    self.log_file.write(log)
                                     self.logger.debug("expected_ack not correct !!!")
                                     self.logger.debug("oldest_unacked_pkt.num: %s" % self.oldest_unacked_pkt.ack_num)
                                     self.logger.debug("recv_seq_num: %s, ignore" % recv_seq_num)
@@ -171,13 +211,13 @@ class Sender(object):
 
       def close_sender(self):
           self.sent_file.close()
+          self.log_file.close()
           self.status = False
 
       def run(self):
           self.sender_loop();
 
 if __name__ == "__main__":
-   ip, port, recv_ip, recv_port = localhost, default_port, localhost, 41192
-   # params = send_arg_parser(sys.argv)
-   sender = Sender(ip, port, recv_ip, recv_port, "test/test.pdf", 1000)
+   params = send_arg_parser(sys.argv)
+   sender = Sender(**params)
    sender.run()

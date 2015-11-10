@@ -19,14 +19,5 @@ def progress_bar(length):
         sleep(0.25)
     sys.stdout.write('\n')
 
-def progress_bar(curr_filesize, filesize):
-    progress = curr_filesize * 50.0 / filesize
-    sys.stdout.write('\r')
-    # the exact output you're looking for:
-    sys.stdout.write("[%-50s] %d%%" % ('=' * progress, 2 * progress))
-    sys.stdout.flush()
-    sleep(0.1)
-    sys.stdout.write('\n')
-
 if __name__ == "__main__":
     progress_bar(50)
