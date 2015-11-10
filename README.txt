@@ -1,5 +1,5 @@
 PyTalk
-Computer Networks Programming Assignment 1: Socket Programming - Simple Chat App
+Computer Networks Programming Assignment 2: Socket Programming - Simple Chat App
 
 Chia-Hao Hsu
 UNI: ch3141

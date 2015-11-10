@@ -1,8 +1,10 @@
+
 import logging
 import os
 import select
 import socket
 import sys
+import time
 
 from Utils  import recv_arg_parser, init_recv_socket, progress_bar
 
@@ -19,6 +21,7 @@ class Receiver(object):
           self.recv_ip     = recv_ip
           self.recv_port   = recv_port
           self.window_size = 1
+          self.file_size   = 0
           self.send_addr   = (send_ip, int(send_port))
           self.file_write  = open(filename, "wb+")
           self.pkt_gen     = PacketGenerator(recv_port, send_port)

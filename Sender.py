@@ -17,7 +17,7 @@ default_port = 8080
 
 class Sender(object):
       def __init__(self, send_ip, send_port, recv_ip, recv_port,
-                   filename, window_size=1):
+                   filename, window_size=1, log_name):
           self.sender_sock = init_send_socket((send_ip, send_port))
           self.connections = [self.sender_sock]
           self.recv_addr   = (recv_ip, recv_port)
@@ -177,8 +177,7 @@ class Sender(object):
           self.sender_loop();
 
 if __name__ == "__main__":
-   ip, port, recv_ip, recv_port = localhost, default_port, localhost, default_port + 2
+   ip, port, recv_ip, recv_port = localhost, default_port, localhost, 41192
    # params = send_arg_parser(sys.argv)
    sender = Sender(ip, port, recv_ip, recv_port, "test/test.pdf", 1000)
    sender.run()
-   # 160.39.227.140 with port 8082
