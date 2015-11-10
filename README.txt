@@ -89,8 +89,8 @@ Since there is nothing to see when receiver is receiving things, which is bornin
 It will looks like this when receiver is receiving the file from sender:
 
 File Delivering...[==============                                    ] 29%
-
 Remember to widen your terminal more than 80 pixel, or it will look funny.
+
 ------
 
 #### Hope you enjoy Pyle-Transfer !!!
