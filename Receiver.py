@@ -1,3 +1,4 @@
+import datetime
 import logging
 import os
 import select
@@ -13,8 +14,10 @@ localhost    = socket.gethostbyname(socket.gethostname())
 default_port = 8080
 
 class Receiver(object):
-      def __init__(self, recv_ip, recv_port, send_ip, send_port,               \
-                         filename, log_name="recv_log.txt"):
+      def __init__(self, recv_ip=localhost, recv_port=default_port+2,          \
+                         send_ip=localhost, send_port=default_port,            \
+                         filename="test/received_test.pdf",                    \
+                         log_name="log/recv_log.txt"):
           self.recv_sock   = init_recv_socket((recv_ip, recv_port))
           self.connections = [self.recv_sock]
           self.recv_ip     = recv_ip
@@ -22,7 +25,8 @@ class Receiver(object):
           self.window_size = 1
           self.send_addr   = (send_ip, int(send_port))
           self.file_write  = open(filename, "wb+")
-          # self.log_file    = open(log_name, "w")
+          self.log_file    = [sys.stdout, open(log_name, "w")]                 \
+                             [log_name != "stdout"]
           self.pkt_gen     = PacketGenerator(recv_port, send_port)
           self.pkt_ext     = PacketExtractor(recv_port, send_port)
           self.expected_ack = 0
@@ -91,7 +95,13 @@ class Receiver(object):
                             send_fin_flag = self.pkt_ext                       \
                                                 .get_fin_flag(header_params)
                             send_checksum = self.pkt_ext.get_checksum(header_params)
+                            log =   str(datetime.datetime.now()) + " " +       \
+                                    str(self.send_addr[1]) + " " +             \
+                                    str(self.recv_port) + " " +                \
+                                    str(send_seq_num) + " " +                  \
+                                    str(send_ack_num)
                             if send_fin_flag and self.is_write_file_completed():
+                                self.log_file.write(log + " FIN\n")
                                 send_data = self.pkt_ext                       \
                                                 .get_data_from_packet          \
                                                           (send_packet)
@@ -101,6 +111,7 @@ class Receiver(object):
                                 self.close_receiver()
                                 print "Delivery completed successfully"
                             else:
+                                self.log_file.write(log + "\n")
                                 if self.expected_ack == send_seq_num and       \
                                    self.pkt_ext.is_checksum_valid(send_packet):
                                     send_data = self.pkt_ext                   \
@@ -137,15 +148,13 @@ class Receiver(object):
 
       def close_receiver(self):
           self.file_write.close()
+          self.log_file.close()
           self.status = False
 
       def run(self):
           self.receiver_loop()
 
 if __name__ == "__main__":
-   # addr, port = argv_reader(sys.argv)
-   ip, port, send_ip, send_port = localhost, default_port + 2, localhost, default_port
-   # params = recv_arg_parser(sys.argv)
-   # receiver = Receiver(**params)
-   receiver = Receiver(ip, port, send_ip, send_port, "test/received_test.pdf")
+   params = recv_arg_parser(sys.argv)
+   receiver = Receiver(**params)
    receiver.run()
